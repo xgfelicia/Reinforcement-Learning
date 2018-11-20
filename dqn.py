@@ -51,8 +51,8 @@ class DQNagent():
 	def __init__(self):
 		self.totalMem = 10000
 		self.memory = collections.deque(maxlen = self.totalMem)  # replay memory
-		self.gamma = 0.8
-		self.epsilon = 1.0
+		self.gamma = 0.80
+		self.epsilon = 0.5
 		self.epsilon_min = 0.01
 		self.epsilon_decay = 0.9999
 		self.model = DQN()  # action value function Q
@@ -95,11 +95,9 @@ class DQNagent():
 		batch = Transition(*zip(*transitions))
 
 		# Compute a mask of non-final states and concatenate the batch elements
-		non_final_mask = torch.ByteTensor(tuple(map(lambda s: s is not None,
-											  batch.next_state)))
+		non_final_mask = torch.ByteTensor(tuple(map(lambda s: s is not None, batch.next_state)))
 
-		non_final_next_states = Variable(torch.cat([s for s in batch.next_state
-													if s is not None]))
+		non_final_next_states = Variable(torch.cat([s for s in batch.next_state if s is not None]))
 
 		state_batch = Variable(torch.cat(batch.state))
 		action_batch = Variable(torch.cat(batch.action))
@@ -168,7 +166,8 @@ def main():
 	max_episodes = 200
 	batch_size = 32
 	episode_durations = []
-	target_step = 1
+	target_step = 2
+	penalty = -100
 
 	for i_episode in range(max_episodes):
 		# get initial state s
@@ -185,7 +184,7 @@ def main():
 			if (not done):
 				agent.remember(state, action, next_state, reward)
 			else: # done
-				agent.remember(state, action, next_state, reward)
+				agent.remember(state, action, next_state, reward + penalty)
 
 			state = next_state
 			agent.replay(batch_size, optimizer)
@@ -211,6 +210,6 @@ if __name__ == '__main__':
 	                        ('state', 'action', 'next_state', 'reward'))
 
 	agent = DQNagent()
-	optimizer = optim.Adam(filter(lambda p: p.requires_grad, agent.model.parameters()), lr=0.005)
+	optimizer = optim.Adam(filter(lambda p: p.requires_grad, agent.model.parameters()), lr=0.001)
 
 	main()
