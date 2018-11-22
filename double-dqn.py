@@ -1,8 +1,4 @@
-# code is based off "Implementing the Deep Q-Network"
-# Roderick; MacGlashan; Tellex
-# 2017.
 
-# algorithm: deep q learning with experence replay
 
 import gym
 import random
@@ -25,7 +21,6 @@ from torch.autograd import Variable
 class DQN(nn.Module):
 	def __init__(self):
 		super(DQN, self).__init__()
-
 		hidden = 256
 
 		self.run = nn.Sequential(
@@ -34,8 +29,7 @@ class DQN(nn.Module):
 		)
 
 		self.run2 = nn.Sequential(
-			nn.Linear(hidden, 2),
-			nn.ReLU()
+			nn.Linear(hidden, 2)
 		)
 
 	def forward(self, x):
@@ -49,13 +43,13 @@ class DQN(nn.Module):
 class DQNagent():
 	def __init__(self):
 		self.totalMem = 10000
-		self.memory = collections.deque(maxlen = self.totalMem)  # replay memory
-		self.gamma = 0.80
+		self.memory = collections.deque(maxlen = self.totalMem)
+		self.gamma = 1.0
 		self.epsilon = 0.5
 		self.epsilon_min = 0.01
-		self.epsilon_decay = 0.9999
-		self.model = DQN()  # action value function Q
-		self.target = DQN()  # target action-value function Q_hat
+		self.epsilon_decay = 0.999
+		self.model = DQN()
+		self.target = DQN()
 
 
 	def remember(self, state, action, reward, next_state):
@@ -63,13 +57,13 @@ class DQNagent():
 			data = Transition(state, action, reward, next_state)
 			self.memory.append(data)
 
-	# with epsilon probability select a random action a_t
-	# else, choose action that maximizes the q function
-	def act(self, state):
+
+	def act(self, state ):
 		sample = random.random()
 		self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
 
-		if (sample > self.epsilon):
+		# epsilon greedy algorithm
+		if (sample > self.epsilon ):
 			return self.model(state.type(torch.FloatTensor)).data.max(1)[1].view(1, 1)
 		else:
 			return torch.LongTensor([[random.randrange(2)]])
@@ -89,34 +83,45 @@ class DQNagent():
 		if (self.getLength() < batch_size):
 			return
 
-		# sample random minibatch of experiences
+		# experience replay
 		transitions = self.sample(batch_size)
 		batch = Transition(*zip(*transitions))
 
 		# Compute a mask of non-final states and concatenate the batch elements
-		non_final_mask = torch.ByteTensor(tuple(map(lambda s: s is not None, batch.next_state)))
+		non_final_mask = torch.ByteTensor(tuple(map(lambda s: s is not None,
+											  batch.next_state)))
 
-		non_final_next_states = Variable(torch.cat([s for s in batch.next_state if s is not None]))
+		non_final_next_states = Variable(torch.cat([s for s in batch.next_state
+													if s is not None]))
 
 		state_batch = Variable(torch.cat(batch.state))
 		action_batch = Variable(torch.cat(batch.action))
 		reward_batch = Variable(torch.cat(batch.reward))
 
 		state_action_values = self.model(state_batch).gather(1, action_batch)
-
 		next_state_values = Variable(torch.zeros(batch_size).type(torch.Tensor))
-		next_state_values[non_final_mask] = self.target(non_final_next_states).max(1)[0].detach()
 
+		# get max q-value using target parameters, which are updated every t steps
+		next_state_values[non_final_mask] = self.model(non_final_next_states).max(1)[0].detach()
 		expected_state_action_values = (next_state_values * self.gamma) + reward_batch
 
-		loss = F.mse_loss(state_action_values, expected_state_action_values.unsqueeze(1))
+		# get index of the action chosen (action selection)
+		policy_index = list(expected_state_action_values).index(expected_state_action_values.max())
+
+		# calculate Y_t using chosen action (action evaluation)
+		target_result = self.target.forward(non_final_next_states[policy_index: ]).max(1)[0].detach()
+		expected_target_action_value = (target_result * self.gamma) + reward_batch[policy_index: ]
+
+		loss = F.mse_loss(state_action_values[policy_index: ].view(-1), expected_target_action_value)
 
 		optimizer.zero_grad()
 		loss.backward()
 		optimizer.step()
 
 
-#######################################################################
+
+#############################################################################
+
 
 def plot_durations(current_ep):
     plt.figure(2)
@@ -137,6 +142,7 @@ def plot_durations(current_ep):
     plt.pause(0.001)
 
 
+
 def final_plot_durations(current_ep):
     plt.figure(2)
     plt.clf()
@@ -154,32 +160,33 @@ def final_plot_durations(current_ep):
 
     plt.show()
 
-#############################################
+
+######################################################################
 
 
 def main():
-	max_episodes = 200
+	max_episodes = 1000
 	batch_size = 32
 	episode_durations = []
-	target_step = 2
-	penalty = -100
+	target_update = 500
+	step = 0
+
 
 	for i_episode in range(max_episodes):
-		# get initial state s
 		state = env.reset()
 		state = torch.FloatTensor([state])
 
 		for i in count():
+			step += 1
 			action = agent.act(state)
 			observed, reward, done, _ = env.step(action.item())
 			next_state = torch.FloatTensor([observed])
 			reward = torch.FloatTensor([reward])
 
-			# store experiences
 			if (not done):
 				agent.remember(state, action, next_state, reward)
 			else: # done
-				agent.remember(state, action, next_state, reward + penalty)
+				agent.remember(state, action, next_state, reward - 200 )
 
 			state = next_state
 			agent.replay(batch_size, optimizer)
@@ -190,13 +197,10 @@ def main():
 				plot_durations(episode_durations)
 				break
 
-		if (i_episode % target_step == 0):
-			agent.target.load_state_dict(agent.model.state_dict())
+			if step % target_update == 0:
+				agent.target.load_state_dict(agent.model.state_dict())
 
 	final_plot_durations(episode_durations)
-
-
-#######################################################
 
 
 if __name__ == '__main__':
