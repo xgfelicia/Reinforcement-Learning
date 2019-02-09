@@ -10,3 +10,6 @@ Toy repository for implementating different RL algorithms.
 ### Double DQN 
 - Hasselt, H.V., Guez, A., & Silver, D. (2016). Deep Reinforcement Learning with Double Q-learning. AAAI.
   - https://arxiv.org/abs/1509.06461
+  
+  
+### Policy Gradients 
