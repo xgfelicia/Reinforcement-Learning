@@ -34,8 +34,7 @@ class DQN(nn.Module):
 		)
 
 		self.run2 = nn.Sequential(
-			nn.Linear(hidden, 2),
-			nn.ReLU()
+			nn.Linear(hidden, 2)
 		)
 
 	def forward(self, x):
@@ -53,7 +52,7 @@ class DQNagent():
 		self.gamma = 0.80
 		self.epsilon = 0.5
 		self.epsilon_min = 0.01
-		self.epsilon_decay = 0.9999
+		self.epsilon_decay = 0.999
 		self.model = DQN()  # action value function Q
 		self.target = DQN()  # target action-value function Q_hat
 
@@ -158,11 +157,11 @@ def final_plot_durations(current_ep):
 
 
 def main():
-	max_episodes = 200
+	max_episodes = 500
 	batch_size = 32
 	episode_durations = []
 	target_step = 2
-	penalty = -100
+	penalty = -200
 
 	for i_episode in range(max_episodes):
 		# get initial state s
@@ -192,6 +191,12 @@ def main():
 
 		if (i_episode % target_step == 0):
 			agent.target.load_state_dict(agent.model.state_dict())
+
+		mean_score = np.mean(episode_durations[-100:])
+		if mean_score > env.spec.reward_threshold:
+			print("Solved after {} episodes! Running average is now {}. Last episode ran to {} time steps."
+				  .format(i_episode, mean_score, i))
+			break
 
 	final_plot_durations(episode_durations)
 

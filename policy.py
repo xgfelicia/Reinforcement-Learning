@@ -52,13 +52,15 @@ class Agent():
 
 
 	def predict(self, state):
-		# Select an action (0 or 1) by running policy model
+		# Policy model takes input state and outputs the probabilites of the actions
 		# and choosing based on the probabilities in state
 		state = torch.from_numpy(state).type(torch.FloatTensor)
 		action_probs = self.model(state)
 
-		# store as relative probability
+		# store as batch of relative probability
 		distribution = torch.distributions.Categorical(action_probs)
+
+		# generate sample based on distribution
 		action = distribution.sample()
 
 		# concatenate actions with log probability
@@ -80,11 +82,12 @@ class Agent():
 			rewards.insert(0, R)
 
 		# standardize rewards with mean and sd and prevent 0 denominator
+		# standardize to get relative reward 
 		# finfo().eps =  2.22044604925e-16
 		rewards = torch.FloatTensor(rewards)
 		rewards = (rewards - rewards.mean()) / (rewards.std() + np.finfo(np.float64).eps)
 
-		# Calculate loss
+		# Calculate loss (multiply reward by -1 )
 		loss = (torch.sum(torch.mul(self.model.episode_actions, rewards).mul(-1), -1))
 
 		# Update network weights
