@@ -13,3 +13,5 @@ Toy repository for implementating different RL algorithms.
   
   
 ### Policy Gradients 
+
+### Actor Critic
