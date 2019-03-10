@@ -1,5 +1,4 @@
 
-
 import gym
 import random
 import collections
@@ -19,37 +18,34 @@ from torch.autograd import Variable
 
 
 class DQN(nn.Module):
-	def __init__(self):
+	def __init__(self, state_size, action_size):
 		super(DQN, self).__init__()
 		hidden = 256
+		hidden2 = 512
 
 		self.run = nn.Sequential(
-			nn.Linear(4, hidden),
-			nn.ReLU()
-		)
-
-		self.run2 = nn.Sequential(
-			nn.Linear(hidden, 2)
+			nn.Linear(state_size, hidden),
+			nn.ReLU(),
+			nn.Linear(hidden, action_size)
 		)
 
 	def forward(self, x):
 		x = self.run(x)
-		x = self.run2(x)
 		return x
 
 #########################################################################
 # DNQagent
 
 class DQNagent():
-	def __init__(self):
+	def __init__(self, state_size, action_size):
 		self.totalMem = 10000
 		self.memory = collections.deque(maxlen = self.totalMem)
-		self.gamma = 1.0
+		self.gamma = 0.8
 		self.epsilon = 0.5
 		self.epsilon_min = 0.01
 		self.epsilon_decay = 0.999
-		self.model = DQN()
-		self.target = DQN()
+		self.model = DQN(state_size, action_size)
+		self.target = DQN(state_size, action_size)
 
 
 	def remember(self, state, action, reward, next_state):
@@ -165,19 +161,19 @@ def final_plot_durations(current_ep):
 
 
 def main():
-	max_episodes = 1000
-	batch_size = 32
+	max_episodes = 500
+	batch_size = 64
 	episode_durations = []
-	target_update = 500
+	target_update = 10
 	step = 0
-
+	penalty = -300
 
 	for i_episode in range(max_episodes):
 		state = env.reset()
 		state = torch.FloatTensor([state])
+		step += 1
 
 		for i in count():
-			step += 1
 			action = agent.act(state)
 			observed, reward, done, _ = env.step(action.item())
 			next_state = torch.FloatTensor([observed])
@@ -186,7 +182,7 @@ def main():
 			if (not done):
 				agent.remember(state, action, next_state, reward)
 			else: # done
-				agent.remember(state, action, next_state, reward - 200 )
+				agent.remember(state, action, next_state, reward + penalty )
 
 			state = next_state
 			agent.replay(batch_size, optimizer)
@@ -197,8 +193,8 @@ def main():
 				plot_durations(episode_durations)
 				break
 
-			if step % target_update == 0:
-				agent.target.load_state_dict(agent.model.state_dict())
+		if step % target_update == 0:
+			agent.target.load_state_dict(agent.model.state_dict())
 
 	final_plot_durations(episode_durations)
 
@@ -208,7 +204,7 @@ if __name__ == '__main__':
 	Transition = collections.namedtuple('Transition',
 	                        ('state', 'action', 'next_state', 'reward'))
 
-	agent = DQNagent()
-	optimizer = optim.Adam(filter(lambda p: p.requires_grad, agent.model.parameters()), lr=0.005)
+	agent = DQNagent(env.observation_space.shape[0], env.action_space.n)
+	optimizer = optim.Adam(filter(lambda p: p.requires_grad, agent.model.parameters()), lr=0.001)
 
-	main()
+main()
