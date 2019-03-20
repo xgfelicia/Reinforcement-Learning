@@ -19,7 +19,7 @@ ARG_DICT = {"--no-cuda": "",
             }
 
 
-GAMMA = np.linspace(0.8, 1, num = 5, endpoint = True)
+GAMMA = [0.99] # np.linspace(0.8, 1, num = 5, endpoint = True)
 FG_SIZE = [100] # np.arange(0, 100 + 1, 10)
 BATCH_SIZE = [32]
 MAX_ITR = [250] #np.arange(2000, 10000 + 1, 1000)
@@ -31,7 +31,7 @@ def createCmd(args, output):
     cmd = " ".join( [PROGRAM_CMD, PYTHON_FILE] +
                         [ key + " " + str(value) for key, value in args.items()] )
 
-    cmd = cmd + " > " + output
+    cmd = cmd #  + " > " + output
     # print(cmd)
     return cmd
 

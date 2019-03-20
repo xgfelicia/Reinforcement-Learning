@@ -3,13 +3,16 @@ import gym
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import argparse 
+import argparse
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torch.distributions
+
+from tensorboardX import SummaryWriter
+
 
 
 parser = argparse.ArgumentParser(description = "PyTorch DQN")
@@ -27,7 +30,15 @@ ARGS = parser.parse_args()
 print(vars(ARGS))
 
 
+def filenameGenerate(base, gamma, lr):
+    args = {"--gamma": gamma,
+            "--learning-rate": lr,
+            }
 
+    name = base + "".join([ key + str(value) for key, value in sorted(args.items())] )
+    return name
+
+##################################################################
 
 # policy neural net class
 class Policy(nn.Module):
@@ -121,6 +132,9 @@ class Agent():
 
 	def train(self, episodes, max_step):
 		scores = []
+		name = filenameGenerate("policy", self.gamma, self.learning_rate)
+		writer = SummaryWriter()
+
 
 		for episode in range(episodes):
 			state = env.reset()
@@ -141,6 +155,8 @@ class Agent():
 			# update policy after episode done
 			self.update_policy()
 
+			writer.add_scalar(tag = name + '/', scalar_value = time, global_step = episode)
+
 			# Calculate score to determine when the environment has been solved
 			scores.append(time)
 			mean_score = np.mean(scores[-100:]) # last 100 times > 195.0
@@ -154,6 +170,7 @@ class Agent():
 					  .format(episode, mean_score, time))
 				break
 
+		writer.close()
 
 ########################################################
 
