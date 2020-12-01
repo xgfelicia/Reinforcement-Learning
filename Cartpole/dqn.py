@@ -2,7 +2,7 @@
 # Roderick; MacGlashan; Tellex
 # 2017.
 
-# algorithm: deep q learning with experence replay
+# algorithm: deep q learning with experience replay
 
 import gym
 import random
@@ -23,18 +23,18 @@ from torch.autograd import Variable
 
 
 class DQN(nn.Module):
-	def __init__(self):
+	def __init__(self, input_size, output_size):
 		super(DQN, self).__init__()
 
 		hidden = 256
 
 		self.run = nn.Sequential(
-			nn.Linear(4, hidden),
+			nn.Linear(input_size, hidden),
 			nn.ReLU()
 		)
 
 		self.run2 = nn.Sequential(
-			nn.Linear(hidden, 2)
+			nn.Linear(hidden, output_size)
 		)
 
 	def forward(self, x):
@@ -46,15 +46,15 @@ class DQN(nn.Module):
 # DNQagent
 
 class DQNagent():
-	def __init__(self):
+	def __init__(self, input, output):
 		self.totalMem = 10000
 		self.memory = collections.deque(maxlen = self.totalMem)  # replay memory
 		self.gamma = 0.80
 		self.epsilon = 0.5
 		self.epsilon_min = 0.01
 		self.epsilon_decay = 0.999
-		self.model = DQN()  # action value function Q
-		self.target = DQN()  # target action-value function Q_hat
+		self.model = DQN(input, output)  # action value function Q
+		self.target = DQN(input, output)  # target action-value function Q_hat
 
 
 	def remember(self, state, action, reward, next_state):
@@ -93,7 +93,7 @@ class DQNagent():
 		batch = Transition(*zip(*transitions))
 
 		# Compute a mask of non-final states and concatenate the batch elements
-		non_final_mask = torch.ByteTensor(tuple(map(lambda s: s is not None, batch.next_state)))
+		non_final_mask = torch.tensor(tuple(map(lambda s: s is not None, batch.next_state)), dtype=torch.bool)
 
 		non_final_next_states = Variable(torch.cat([s for s in batch.next_state if s is not None]))
 
@@ -209,7 +209,7 @@ if __name__ == '__main__':
 	Transition = collections.namedtuple('Transition',
 	                        ('state', 'action', 'next_state', 'reward'))
 
-	agent = DQNagent()
+	agent = DQNagent(env.observation_space.shape[0], env.action_space.n)
 	optimizer = optim.Adam(filter(lambda p: p.requires_grad, agent.model.parameters()), lr=0.005)
 
 	main()

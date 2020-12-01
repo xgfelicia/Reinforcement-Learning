@@ -100,7 +100,7 @@ class DQNagent():
 		batch = Transition(*zip(*transitions))
 
 		# Compute a mask of non-final states and concatenate the batch elements
-		non_final_mask = torch.ByteTensor(tuple(map(lambda s: s is not None, batch.next_state))).to(device)
+		non_final_mask = torch.tensor(tuple(map(lambda s: s is not None, batch.next_state)), dtype=torch.bool).to(device)
 
 		non_final_next_states = Variable(torch.cat([s for s in batch.next_state if s is not None])).to(device)
 
